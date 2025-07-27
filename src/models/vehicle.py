@@ -51,14 +51,14 @@ class Vehicle(db.Model):
         }
     
     def set_imagens(self, imagens_list):
-        """Define as imagens como JSON string"""
+        """Define as imagens como JSON string - suporta URLs e base64"""
         if imagens_list:
             self.imagens = json.dumps(imagens_list)
         else:
             self.imagens = None
     
     def get_imagens(self):
-        """Retorna as imagens como lista"""
+        """Retorna as imagens como lista - suporta URLs e base64"""
         if self.imagens:
             try:
                 return json.loads(self.imagens)
@@ -66,18 +66,18 @@ class Vehicle(db.Model):
                 return []
         return []
     
-    def add_imagem(self, filename):
-        """Adiciona uma imagem à lista"""
+    def add_imagem(self, image_data):
+        """Adiciona uma imagem à lista - suporta URLs e base64"""
         imagens = self.get_imagens()
-        if filename not in imagens:
-            imagens.append(filename)
+        if image_data not in imagens:
+            imagens.append(image_data)
             self.set_imagens(imagens)
     
-    def remove_imagem(self, filename):
-        """Remove uma imagem da lista"""
+    def remove_imagem(self, image_data):
+        """Remove uma imagem da lista - suporta URLs e base64"""
         imagens = self.get_imagens()
-        if filename in imagens:
-            imagens.remove(filename)
+        if image_data in imagens:
+            imagens.remove(image_data)
             self.set_imagens(imagens)
     
     def __repr__(self):
