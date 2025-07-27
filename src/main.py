@@ -35,8 +35,14 @@ def create_app():
     
     # Configuração do banco de dados
     database_url = os.environ['DATABASE_URL']
+
     if database_url.startswith('postgres://'):
      database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+    # Troca para usar o driver psycopg3
+    if database_url.startswith('postgresql://'):
+    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     
     # Configurações de upload
