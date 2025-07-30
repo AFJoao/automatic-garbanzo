@@ -6,6 +6,16 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from marshmallow import Schema, fields, ValidationError, validate
 from datetime import datetime, timedelta
 from src.models.user import User, db
+import logging
+from collections import defaultdict
+import time
+
+# Configurar logging de segurança
+security_logger = logging.getLogger('security')
+security_logger.setLevel(logging.INFO)
+
+# Rate limiting simples em memória (para produção, usar Redis)
+login_attempts = defaultdict(list)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -14,26 +24,63 @@ class LoginSchema(Schema):
     email = fields.Email(required=True, validate=validate.Length(min=5, max=120))
     password = fields.Str(required=True, validate=validate.Length(min=6, max=100))
 
+def check_rate_limit(ip_address, max_attempts=5, window_minutes=15):
+    """
+    Verifica se o IP excedeu o limite de tentativas de login
+    """
+    current_time = time.time()
+    window_start = current_time - (window_minutes * 60)
+    
+    # Limpar tentativas antigas
+    login_attempts[ip_address] = [
+        attempt_time for attempt_time in login_attempts[ip_address]
+        if attempt_time > window_start
+    ]
+    
+    # Verificar se excedeu o limite
+    if len(login_attempts[ip_address]) >= max_attempts:
+        return False
+    
+    return True
+
+def record_login_attempt(ip_address):
+    """
+    Registra uma tentativa de login
+    """
+    login_attempts[ip_address].append(time.time())
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """
     Endpoint de login para administradores
     Retorna token JWT válido por 24 horas
     """
+    client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+    
     try:
+        # Verificar rate limiting
+        if not check_rate_limit(client_ip):
+            security_logger.warning(f'Rate limit exceeded for IP: {client_ip}')
+            return jsonify({'error': 'Muitas tentativas de login. Tente novamente em 15 minutos.'}), 429
+        
         # Validar dados de entrada
         schema = LoginSchema()
         data = schema.load(request.get_json() or {})
+        
+        # Registrar tentativa de login
+        record_login_attempt(client_ip)
         
         # Buscar usuário no banco
         user = User.query.filter_by(email=data['email']).first()
         
         # Verificar credenciais
         if not user or not user.check_password(data['password']):
+            security_logger.warning(f'Failed login attempt for email: {data["email"]} from IP: {client_ip}')
             return jsonify({'error': 'Email ou senha inválidos'}), 401
         
         # Verificar se usuário está ativo
         if not user.is_active:
+            security_logger.warning(f'Login attempt for inactive user: {data["email"]} from IP: {client_ip}')
             return jsonify({'error': 'Usuário inativo'}), 401
         
         # Criar token JWT com claims adicionais
@@ -52,6 +99,9 @@ def login():
         user.last_login = datetime.utcnow()
         db.session.commit()
         
+        # Log de login bem-sucedido
+        security_logger.info(f'Successful login for user: {user.email} from IP: {client_ip}')
+        
         return jsonify({
             'message': 'Login realizado com sucesso',
             'access_token': access_token,
@@ -59,8 +109,10 @@ def login():
         }), 200
         
     except ValidationError as e:
+        security_logger.warning(f'Invalid login data from IP: {client_ip} - {e.messages}')
         return jsonify({'errors': e.messages}), 400
     except Exception as e:
+        security_logger.error(f'Login error from IP: {client_ip} - {str(e)}')
         return jsonify({'error': 'Erro interno do servidor'}), 500
 
 @auth_bp.route('/verify', methods=['GET'])

@@ -55,9 +55,20 @@ def create_app():
     
     # CORS - Permitir todas as origens para desenvolvimento e deploy
     CORS(app, 
-         origins="*",
+         origins=os.environ.get(\'FRONTEND_URL\', \'http://localhost:3000\').split(\,\'),
          allow_headers=["Content-Type", "Authorization"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    
+    # Headers de segurança
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        return response
+    
     
     # Inicializar banco de dados
     db.init_app(app)
