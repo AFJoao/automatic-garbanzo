@@ -34,12 +34,12 @@ def create_app():
     app.config['JWT_ALGORITHM'] = 'HS256'
     
     # Configuração do banco de dados
-    database_url = os.environ['DATABASE_URL']
+    database_url = os.environ.get('DATABASE_URL', 'sqlite:///concessionaria.db')
 
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-# Troca para usar o driver psycopg3
+    # Troca para usar o driver psycopg3
     if database_url.startswith('postgresql://'):
         database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
 
@@ -54,29 +54,10 @@ def create_app():
     jwt = JWTManager(app)
     
     # CORS - Permitir todas as origens para desenvolvimento e deploy
-<<<<<<< HEAD
     CORS(app, 
-         origins=os.environ.get(\'FRONTEND_URL\', \'http://localhost:3000\').split(\,\'),
+         origins=os.environ.get('FRONTEND_URL', 'http://localhost:3000').split(','),
          allow_headers=["Content-Type", "Authorization"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-=======
-    CORS(
-    app,
-    origins=os.environ.get('FRONTEND_URL', 'http://localhost:3000').split(','),
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    )
-    # Headers de segurança
-    @app.after_request
-    def add_security_headers(response):
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        return response
-    
->>>>>>> e46cb08 (mudanças novas)
     
     # Headers de segurança
     @app.after_request
