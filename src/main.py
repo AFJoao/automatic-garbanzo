@@ -44,6 +44,7 @@ def create_app():
         database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Configurações de upload
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
@@ -53,22 +54,37 @@ def create_app():
     # JWT
     jwt = JWTManager(app)
     
-    # CORS - Permitir todas as origens para desenvolvimento e deploy
+    # CORS - Configuração mais permissiva para resolver problemas
     CORS(app, 
-         origins=os.environ.get('FRONTEND_URL', 'http://localhost:3000').split(','),
-         allow_headers=["Content-Type", "Authorization"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+         resources={r"/*": {"origins": "*"}},
+         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         supports_credentials=True)
     
-    # Headers de segurança
+    # Headers de segurança e CORS adicionais
     @app.after_request
     def add_security_headers(response):
+        # Headers CORS adicionais
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        
+        # Headers de segurança
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         return response
     
+    # Handler para requisições OPTIONS (preflight)
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = jsonify({'status': 'ok'})
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
+            response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
+            return response
     
     # Inicializar banco de dados
     db.init_app(app)
