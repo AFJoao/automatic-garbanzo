@@ -16,7 +16,8 @@ class VehicleSchema(Schema):
     marca = fields.Str(required=True, validate=validate.Length(min=2, max=100))
     modelo = fields.Str(required=True, validate=validate.Length(min=2, max=100))
     ano = fields.Int(required=True, validate=validate.Range(min=1900, max=2030))
-    preco = fields.Float(required=True, validate=validate.Range(min=0, max=10000000))
+    preco = fields.Float(required=False, allow_none=True, validate=validate.Range(min=0, max=10000000))
+    sob_consulta = fields.Bool(missing=False)
     descricao = fields.Str(validate=validate.Length(max=2000))
     combustivel = fields.Str(validate=validate.OneOf([
         'Gasolina', 'Etanol', 'Flex', 'Diesel', 'Elétrico', 'Híbrido'
@@ -195,7 +196,8 @@ def create_vehicle():
             marca=data['marca'],
             modelo=data['modelo'],
             ano=data['ano'],
-            preco=data['preco'],
+            preco=data.get("preco"),
+            sob_consulta=data.get("sob_consulta", False),
             descricao=data.get('descricao'),
             combustivel=data.get('combustivel'),
             cambio=data.get('cambio'),
@@ -242,7 +244,8 @@ def update_vehicle(vehicle_id):
         vehicle.marca = data['marca']
         vehicle.modelo = data['modelo']
         vehicle.ano = data['ano']
-        vehicle.preco = data['preco']
+        vehicle.preco = data.get("preco")
+        vehicle.sob_consulta = data.get("sob_consulta", vehicle.sob_consulta)
         vehicle.descricao = data.get('descricao')
         vehicle.combustivel = data.get('combustivel')
         vehicle.cambio = data.get('cambio')

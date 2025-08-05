@@ -13,7 +13,8 @@ class Vehicle(db.Model):
     marca = db.Column(db.String(100), nullable=False, index=True)
     modelo = db.Column(db.String(100), nullable=False, index=True)
     ano = db.Column(db.Integer, nullable=False, index=True)
-    preco = db.Column(db.Float, nullable=False, index=True)
+    preco = db.Column(db.Float, nullable=True, index=True)
+    sob_consulta = db.Column(db.Boolean, default=False, nullable=False)
     descricao = db.Column(db.Text)
     combustivel = db.Column(db.String(50), index=True)
     cambio = db.Column(db.String(50))
@@ -36,7 +37,8 @@ class Vehicle(db.Model):
             'marca': self.marca,
             'modelo': self.modelo,
             'ano': self.ano,
-            'preco': self.preco,
+            'preco': self.preco if self.preco is not None else None,
+            'sob_consulta': self.sob_consulta,
             'descricao': self.descricao,
             'combustivel': self.combustivel,
             'cambio': self.cambio,
