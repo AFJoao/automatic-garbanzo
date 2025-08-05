@@ -17,7 +17,7 @@ class VehicleSchema(Schema):
     modelo = fields.Str(required=True, validate=validate.Length(min=2, max=100))
     ano = fields.Int(required=True, validate=validate.Range(min=1900, max=2030))
     preco = fields.Float(required=False, allow_none=True, validate=validate.Range(min=0, max=10000000))
-    sob_consulta = fields.Bool(missing=False)
+    sob_consulta = fields.Bool(load_default=False)
     descricao = fields.Str(validate=validate.Length(max=2000))
     combustivel = fields.Str(validate=validate.OneOf([
         'Gasolina', 'Etanol', 'Flex', 'Diesel', 'Elétrico', 'Híbrido'
