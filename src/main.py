@@ -67,45 +67,14 @@ def create_app():
     # JWT
     jwt = JWTManager(app)
     
-    # CORS - Configuração mais permissiva para resolver problemas
+    # CORS - Configuração simplificada e robusta
     CORS(app, 
-         resources={r"/*": {"origins": "*"}},
-         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+         origins="*",
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         supports_credentials=True)
+         allow_headers=["Content-Type", "Authorization"])
     
     # Inicializar sistema de cache
     init_cache(app)
-    
-    # Headers de segurança e CORS adicionais
-    @app.after_request
-    def add_security_headers(response):
-        # Headers CORS adicionais
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        
-        # Headers de segurança
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        
-        # Headers de cache para recursos estáticos
-        if request.endpoint and any(static in request.endpoint for static in ['static', 'uploads']):
-            response.headers['Cache-Control'] = 'public, max-age=86400'  # 24 horas
-        
-        return response
-    
-    # Handler para requisições OPTIONS (preflight)
-    @app.before_request
-    def handle_preflight():
-        if request.method == "OPTIONS":
-            response = jsonify({'status': 'ok'})
-            response.headers.add("Access-Control-Allow-Origin", "*")
-            response.headers.add('Access-Control-Allow-Headers', "Content-Type, Authorization")
-            response.headers.add('Access-Control-Allow-Methods', "GET, POST, PUT, DELETE, OPTIONS")
-            return response
     
     # Inicializar banco de dados
     db.init_app(app)
